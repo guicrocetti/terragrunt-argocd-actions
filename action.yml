@@ -1,0 +1,40 @@
+name: 'Infrastructure Management Action'
+description: 'Manage infrastructure deployments with Terragrunt'
+inputs:
+  action:
+    description: 'Action to perform (plan/apply/destroy)'
+    required: true
+    default: 'plan'
+  environment:
+    description: 'Target environment (dev/test/prod)'
+    required: true
+    default: 'dev'
+  project-id:
+    description: 'Project ID for infrastructure'
+    required: true
+  github-token:
+    description: 'GitHub token for authentication'
+    required: true
+  argocd-repo:
+    description: 'ArgoCD configuration repository'
+    required: true
+  working-dir:
+    description: 'Working directory for infrastructure code'
+    required: false
+    default: 'clusters'
+  terraform-version:
+    description: 'Terraform version to use'
+    required: false
+    default: '1.9.7'
+  terragrunt-version:
+    description: 'Terragrunt version to use'
+    required: false
+    default: '0.67.16'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+
+branding:
+  icon: 'cloud'
+  color: 'blue'
