@@ -9,24 +9,24 @@ inputs:
     description: 'Target environment (dev/test/prod)'
     required: true
     default: 'dev'
-  project-id:
+  project_id:
     description: 'Project ID for infrastructure'
     required: true
-  github-token:
+  github_token:
     description: 'GitHub token for authentication'
     required: true
-  argocd-repo:
+  argocd_repo:
     description: 'ArgoCD configuration repository'
     required: true
-  working-dir:
+  working_dir:
     description: 'Working directory for infrastructure code'
     required: false
     default: 'clusters'
-  terraform-version:
+  terraform_version:
     description: 'Terraform version to use'
     required: false
     default: '1.9.7'
-  terragrunt-version:
+  terragrunt_version:
     description: 'Terragrunt version to use'
     required: false
     default: '0.67.16'
