@@ -1,0 +1,23 @@
+{
+  "name": "terragrunt-argocd-actions",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "ncc build src/action.js -o dist",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guicrocetti/terragrunt-environment-actions.git"
+  },
+  "author": "Guilherme Crocetti",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/guicrocetti/terragrunt-environment-actions/issues"
+  },
+  "homepage": "https://github.com/guicrocetti/terragrunt-environment-actions#readme",
+  "description": "",
+  "dependencies": {
+    "@vercel/ncc": "^0.38.3"
+  }
+}
