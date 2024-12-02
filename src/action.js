@@ -3,89 +3,105 @@ const github = require('@actions/github');
 const path = require('path');
 const fs = require('fs');
 
+// Detecta módulos que seguem o padrão esperado
 function detectChangedModules(workingDir, projectId, environment) {
+  const folder = fs.readdir('.', { withFileTypes: true })
+  core.info(`${JSON.stringify(folder)}`)
+
   const basePath = path.join(workingDir, projectId);
   const modules = [];
 
-  const GITHUB_TOKEN = core.getInput('GITHUB_TOKEN');
-  // const octokit = github.getOctokit(GITHUB_TOKEN);
-
-  const { context = {} } = github
-  const { pull_request } = context.payload;
-
-  console.log(`Pull Request Number:`, pull_request);
-  
-
-  function scanDirectory(directory) {
+  function scanDirectory(directory, level = 1) {
     const items = fs.readdirSync(directory, { withFileTypes: true });
-
-    core.info(`ITEMS >>>>>>>>> ${JSON.stringify(items)}`);
-    
     for (const item of items) {
-      const fullPath = path.join(directory, item.name);
+      if (item.name.startsWith('_')) continue;
 
-      core.info(`fullPath >>>>>>> ${fullPath}`);
-      
+      const fullPath = path.join(directory, item.name);
       if (item.isDirectory()) {
-        if (item.name.endsWith(`-${environment}`)) {
+        if (level === 2 && item.name.endsWith(`-${environment}`)) {
           modules.push(fullPath);
-        } else {
-          scanDirectory(fullPath);
+        } else if (level < 2) {
+          scanDirectory(fullPath, level + 1);
         }
       }
     }
   }
 
   scanDirectory(basePath);
-  core.info(`MODULES >>>>>>> ${JSON.stringify(modules)}`);
   return modules;
 }
 
-function validateTerragruntPlan(modules) {
-  const results = [];
-  
-  for (const module of modules) {
-    const planPath = path.join(module, 'terragrunt.hcl');
-    if (fs.existsSync(planPath)) {
-      const content = fs.readFileSync(planPath, 'utf8');
-      results.push({
-        module: module,
-        valid: true,
-        content: content
-      });
+// Identifica as diferenças entre duas versões do módulo
+function findEnvModules(modules, targetBranchModules) {
+  const result = {
+    modules: [],
+    destroyModules: [],
+  };
+
+  for (const modulePath of modules) {
+    const moduleName = path.basename(modulePath);
+    console.log(targetBranchModules)
+    const targetPath = targetBranchModules.find((target) => path.basename(target) === moduleName);
+
+    if (!targetPath) {
+      // O módulo não existe na branch de destino
+      result.modules.push(modulePath);
+      continue;
+    }
+
+    // Comparar os arquivos do módulo
+    const currentFiles = getFilesInModule(modulePath);
+    const targetFiles = getFilesInModule(targetPath);
+
+    const missingFiles = targetFiles.filter((file) => !currentFiles.includes(file));
+    if (missingFiles.length > 0) {
+      result.destroyModules.push(modulePath);
+    }
+
+    // Adicionar os arquivos restantes para aplicar
+    const remainingFiles = currentFiles.filter((file) => !missingFiles.includes(file));
+    if (remainingFiles.length > 0) {
+      result.modules.push(modulePath);
     }
   }
-  
-  return results;
+
+  return result;
 }
 
-function generateTerragruntConfig(modules) {
-  return modules.map(module => ({
-    path: module,
-    config: {
-      terragrunt: {
-        include: {
-          path: findParentConfig(module)
-        }
+// Obtém a lista de arquivos em um módulo
+function getFilesInModule(modulePath) {
+  if (!fs.existsSync(modulePath)) {
+    return [];
+  }
+
+  const files = [];
+  function scanFiles(directory) {
+    const items = fs.readdirSync(directory, { withFileTypes: true });
+    for (const item of items) {
+      const fullPath = path.join(directory, item.name);
+      if (item.isDirectory()) {
+        scanFiles(fullPath);
+      } else {
+        files.push(path.relative(modulePath, fullPath));
       }
     }
-  }));
+  }
+
+  scanFiles(modulePath);
+  return files;
 }
 
-function findParentConfig(modulePath) {
-  let currentPath = path.dirname(modulePath);
-  while (currentPath !== '/') {
-    const configPath = path.join(currentPath, 'terragrunt.hcl');
-    if (fs.existsSync(configPath)) {
-      return configPath;
-    }
-    currentPath = path.dirname(currentPath);
-  }
-  return null;
+// Encontra módulos destruídos ou ausentes
+function findDestroyedModules(modulePath, targetPath) {
+  const currentFiles = getFilesInModule(modulePath);
+  const targetFiles = getFilesInModule(targetPath);
+
+  const missingFiles = targetFiles.filter((file) => !currentFiles.includes(file));
+  return missingFiles.length > 0;
 }
 
 module.exports = {
   detectChangedModules,
-  validateTerragruntPlan,
-  generateTerragruntConfig
+  findEnvModules,
+  findDestroyedModules,
 };
