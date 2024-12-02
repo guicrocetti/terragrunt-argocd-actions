@@ -29919,15 +29919,24 @@ function detectChangedModules(workingDir, projectId, environment) {
   const basePath = path.join(workingDir, projectId);
   const modules = [];
 
+  const GITHUB_TOKEN = core.getInput('GITHUB_TOKEN');
+  // const octokit = github.getOctokit(GITHUB_TOKEN);
+
+  const { context = {} } = github
+  const { pull_request } = context.payload;
+
+  console.log(`Pull Request Number:`, pull_request);
+  
+
   function scanDirectory(directory) {
     const items = fs.readdirSync(directory, { withFileTypes: true });
 
-    console.log("ITEMS >>>>>>>>>", items)
+    core.info(`ITEMS >>>>>>>>> ${JSON.stringify(items)}`);
     
     for (const item of items) {
       const fullPath = path.join(directory, item.name);
 
-      console.log("fullPath >>>>>>>", fullPath)
+      core.info(`fullPath >>>>>>> ${fullPath}`);
       
       if (item.isDirectory()) {
         if (item.name.endsWith(`-${environment}`)) {
@@ -29940,7 +29949,7 @@ function detectChangedModules(workingDir, projectId, environment) {
   }
 
   scanDirectory(basePath);
-  console.log("MODULES >>>>>>>", modules)
+  core.info(`MODULES >>>>>>> ${JSON.stringify(modules)}`);
   return modules;
 }
 
@@ -31899,12 +31908,36 @@ module.exports = parseParams
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __nccwpck_require__(5783);
-/******/ 	module.exports = __webpack_exports__;
-/******/ 	
+var __webpack_exports__ = {};
+const core = __nccwpck_require__(7484);
+const { detectChangedModules, validateTerragruntPlan, generateTerragruntConfig } = __nccwpck_require__(5783);
+
+async function run() {
+    try {
+        const workingDir = core.getInput('working_dir');
+        const projectId = core.getInput('project_id');
+        const environment = core.getInput('environment');
+
+        core.info('Starting Terragrunt-ArgoCD Action');
+        core.info(`Working Directory: ${workingDir}`);
+        core.info(`Project ID: ${projectId}`);
+        core.info(`Environment: ${environment}`);
+
+        const changedModules = detectChangedModules(workingDir, projectId, environment);
+        const validationResults = validateTerragruntPlan(changedModules);
+        const config = generateTerragruntConfig(changedModules);
+
+        core.setOutput('modules', changedModules);
+        core.setOutput('validation', validationResults);
+        core.setOutput('config', config);
+
+    } catch (error) {
+        core.setFailed(error.message);
+    }
+}
+
+run();
+
+module.exports = __webpack_exports__;
 /******/ })()
 ;

@@ -7,15 +7,24 @@ function detectChangedModules(workingDir, projectId, environment) {
   const basePath = path.join(workingDir, projectId);
   const modules = [];
 
+  const GITHUB_TOKEN = core.getInput('GITHUB_TOKEN');
+  // const octokit = github.getOctokit(GITHUB_TOKEN);
+
+  const { context = {} } = github
+  const { pull_request } = context.payload;
+
+  console.log(`Pull Request Number:`, pull_request);
+  
+
   function scanDirectory(directory) {
     const items = fs.readdirSync(directory, { withFileTypes: true });
 
-    console.log("ITEMS >>>>>>>>>", items)
+    core.info(`ITEMS >>>>>>>>> ${JSON.stringify(items)}`);
     
     for (const item of items) {
       const fullPath = path.join(directory, item.name);
 
-      console.log("fullPath >>>>>>>", fullPath)
+      core.info(`fullPath >>>>>>> ${fullPath}`);
       
       if (item.isDirectory()) {
         if (item.name.endsWith(`-${environment}`)) {
@@ -28,7 +37,7 @@ function detectChangedModules(workingDir, projectId, environment) {
   }
 
   scanDirectory(basePath);
-  console.log("MODULES >>>>>>>", modules)
+  core.info(`MODULES >>>>>>> ${JSON.stringify(modules)}`);
   return modules;
 }
 
